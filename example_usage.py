@@ -63,7 +63,6 @@ pm.draw_phasor(
 vs_phasor = pm.get_phasor("Vs")
 print("\nVs Phasor properties:")
 print(f"Magnitude: {vs_phasor['magnitude']:.2f}")
-print(f"Angle: {vs_phasor['angle']:.2f}°")
 print(f"End point: ({vs_phasor['end_x']:.2f}, {vs_phasor['end_y']:.2f})")
 
 # Save the diagram

@@ -11,14 +11,14 @@ setup(
         "numpy>=1.20.0",
         "matplotlib>=3.4.0",
     ],
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Ahmed M. Elkholy",
+    author_email="ahm_elkholy@outlook.com",
     description="A powerful Python tool for creating phasor diagrams in electrical engineering",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/YourUsername/PSPhasor",
+    url="https://github.com/ahmelkholy/PSPhasor.git",
     project_urls={
-        "Bug Tracker": "https://github.com/YourUsername/PSPhasor/issues",
+        "Bug Tracker": "https://github.com/ahmelkholy/PSPhasor/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
