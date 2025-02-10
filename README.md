@@ -1,38 +1,46 @@
-# Ultimate Phasor Diagram Tool
+# PSPhasor
 
-A powerful and flexible Python tool for creating phasor diagrams commonly used in electrical engineering and power systems analysis.
+A powerful Python package for creating and manipulating phasor diagrams in electrical engineering.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/ultimate-phasor)](https://pypi.org/project/ultimate-phasor/)
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Advanced Usage](#advanced-usage)
+- [API Reference](#api-reference)
+- [Contributing](#contributing)
 
 ## Features
 
-- Draw phasors with specified magnitude and angle
-- Reference existing phasors for start/end points
-- Automatic plot scaling and formatting
-- Customizable colors and labels
-- Support for absolute and relative positioning
-- Save diagrams to files
+- Create complex phasor diagrams
+- Support for voltage and current phasors
+- Reference-based phasor positioning
+- Customizable colors and styles
+- Export diagrams as images
 
 ## Installation
 
 ```bash
-pip install numpy matplotlib
+pip install PSPhasor
 ```
 
 ## Quick Start
 
 ```python
-from phasor_system import PhasorManager
+from PSPhasor import PhasorManager
 
-# Create a new diagram
+# Create a new phasor diagram
 pm = PhasorManager()
 
-# Draw source voltage (10∠0°)
-pm.draw_phasor("Vs", magnitude=10, angle=0, start_ref="abs", start_x=0, start_y=0)
+# Draw source voltage
+pm.draw_phasor("Vs", magnitude=10, angle=0)
 
-# Draw line voltage drop (2∠30°) from end of Vs
+# Draw load voltage
 pm.draw_phasor("Vl", magnitude=2, angle=30, start_ref="Vs", ref_point="end")
-
-# Draw load voltage from start of Vs
-pm.draw_phasor("Vr", magnitude=8.5, angle=-15, start_ref="Vs", ref_point="start")
 
 # Show the diagram
 pm.show()
@@ -68,16 +76,45 @@ pm.draw_phasor("Q", 5, 90, start_ref="S", ref_point="start", color='red')
 pm.show()
 ```
 
+### Mixed Voltage-Current System Example
+
+```python
+pm = PhasorManager()
+
+# Voltage source
+pm.draw_phasor("V", magnitude=10, angle=0)
+
+# Current through impedance
+pm.draw_phasor("I", magnitude=2, angle=-30, phasor_type="current")
+
+# Voltage drop across impedance
+pm.draw_phasor("Vz", start_x=0, start_y=0, end_x=5, end_y=2)
+
+pm.show()
+```
+
 ## API Reference
 
 ### PhasorManager Methods
 
-- `draw_phasor(name, magnitude, angle, start_ref='abs', start_x=0, start_y=0, ref_point='end', color='red')`
+- `draw_phasor(name, magnitude=None, angle=None, start_ref='abs', start_x=0, start_y=0, end_x=None, end_y=None, ref_point='end', phasor_type='voltage', color=None)`
 - `get_phasor(name)` - Get phasor by name
 - `clear()` - Clear all phasors
-- `show()` - Display the diagram
+- `show(grid=True, equal_aspect=True)` - Display the diagram with enhanced plotting
 - `save(filename)` - Save diagram to file
+
+### Parameters
+
+- `magnitude`: Optional magnitude for angle-based phasors
+- `angle`: Optional angle in degrees for angle-based phasors
+- `start_x, start_y`: Starting coordinates
+- `end_x, end_y`: Ending coordinates (alternative to magnitude/angle)
+- `phasor_type`: 'voltage' or 'current' (affects color and style)
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
