@@ -14,10 +14,21 @@ class Phasor:
 
 
 class PhasorManager:
-    def __init__(self):
+    def __init__(self, figsize=(10, 10)):
+        """Initialize a new phasor diagram"""
         self.phasors = {}
-        self.fig, self.ax = plt.subplots(figsize=(10, 10))
+        self.fig, self.ax = plt.subplots(figsize=figsize)
         self.ax.set_aspect("equal")
+        self._setup_plot()
+
+    def _setup_plot(self):
+        """Setup initial plot styling"""
+        self.ax.grid(True)
+        self.ax.axhline(y=0, color="gray", linestyle="--", alpha=0.3)
+        self.ax.axvline(x=0, color="gray", linestyle="--", alpha=0.3)
+        plt.title("Phasor Diagram")
+        plt.xlabel("Real")
+        plt.ylabel("Imaginary")
 
     def draw_phasor(
         self,
@@ -28,15 +39,34 @@ class PhasorManager:
         start_x=0,
         start_y=0,
         ref_point="end",
+        color="red",
+        label_offset=0.1,
     ):
         """
-        Draw a phasor with given parameters
-        start_ref: 'abs' for absolute coordinates or name of reference phasor
-        ref_point: 'start' or 'end' of reference phasor
+        Draw a phasor with specified parameters
+
+        Parameters:
+        -----------
+        name : str
+            Name/label of the phasor
+        magnitude : float
+            Length of the phasor
+        angle : float
+            Angle in degrees from positive real axis
+        start_ref : str
+            'abs' for absolute coordinates or name of reference phasor
+        start_x, start_y : float
+            Starting coordinates (used if start_ref is 'abs')
+        ref_point : str
+            'start' or 'end' of reference phasor
+        color : str
+            Color of the phasor arrow
+        label_offset : float
+            Offset distance for the label from the phasor
         """
         if start_ref != "abs":
             if start_ref not in self.phasors:
-                raise ValueError(f"Reference phasor {start_ref} not found")
+                raise ValueError(f"Reference phasor '{start_ref}' not found")
             ref_phasor = self.phasors[start_ref]
             if ref_point == "end":
                 start_x = ref_phasor.end_x
@@ -53,19 +83,35 @@ class PhasorManager:
             "",
             xy=(phasor.end_x, phasor.end_y),
             xytext=(phasor.start_x, phasor.start_y),
-            arrowprops=dict(arrowstyle="->", color="red", lw=2),
+            arrowprops=dict(arrowstyle="->", color=color, lw=2),
         )
 
-        # Add label
-        mid_x = (phasor.start_x + phasor.end_x) / 2
-        mid_y = (phasor.start_y + phasor.end_y) / 2
-        self.ax.text(mid_x, mid_y, name, fontsize=12, color="blue")
+        # Add label with offset
+        angle_rad = np.deg2rad(angle)
+        label_x = (phasor.start_x + phasor.end_x) / 2 + label_offset * np.sin(angle_rad)
+        label_y = (phasor.start_y + phasor.end_y) / 2 + label_offset * np.cos(angle_rad)
+        self.ax.text(
+            label_x, label_y, name, fontsize=12, color=color, ha="center", va="center"
+        )
 
         self._update_plot()
         return phasor
 
+    def get_phasor(self, name):
+        """Get a phasor by name"""
+        return self.phasors.get(name)
+
+    def clear(self):
+        """Clear all phasors from the diagram"""
+        self.phasors.clear()
+        self.ax.clear()
+        self._setup_plot()
+
     def _update_plot(self):
         """Update plot limits and styling"""
+        if not self.phasors:
+            return
+
         all_x = []
         all_y = []
         for phasor in self.phasors.values():
@@ -76,11 +122,10 @@ class PhasorManager:
         self.ax.set_xlim(min(all_x) - margin, max(all_x) + margin)
         self.ax.set_ylim(min(all_y) - margin, max(all_y) + margin)
 
-        self.ax.grid(True)
-        self.ax.axhline(y=0, color="gray", linestyle="--", alpha=0.3)
-        self.ax.axvline(x=0, color="gray", linestyle="--", alpha=0.3)
-        plt.title("Phasor Diagram")
-
     def show(self):
         """Display the final diagram"""
         plt.show()
+
+    def save(self, filename):
+        """Save the diagram to a file"""
+        plt.savefig(filename, bbox_inches="tight", dpi=300)
