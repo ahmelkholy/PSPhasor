@@ -200,6 +200,12 @@ class PhasorManager:
         print(f"Diagram saved to {filename}.")
 
 
+class Phasor:
+    def __init__(self, magnitude=0, angle=0):
+        self.magnitude = magnitude
+        self.angle = angle
+
+
 def main():
     """
     Demonstration of using the PhasorManager for typical phasor diagrams.
