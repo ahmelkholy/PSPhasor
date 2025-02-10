@@ -19,7 +19,7 @@ pm.draw_phasor(
 pm.draw_phasor(
     "Vl",
     magnitude=2,
-    angle=30,
+    angle=150,
     start_ref="Vs",
     ref_point="end",
     phasor_type="voltage",

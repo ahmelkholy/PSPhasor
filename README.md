@@ -1,4 +1,4 @@
-# PSPhasor
+# ultimate-phasor
 
 A powerful Python package for creating and manipulating phasor diagrams in electrical engineering.
 
@@ -25,13 +25,13 @@ A powerful Python package for creating and manipulating phasor diagrams in elect
 ## Installation
 
 ```bash
-pip install PSPhasor
+pip install ultimate-phasor
 ```
 
 ## Quick Start
 
 ```python
-from PSPhasor import PhasorManager
+from ultimate_phasor import PhasorManager
 
 # Create a new phasor diagram
 pm = PhasorManager()
@@ -51,6 +51,8 @@ pm.show()
 ### Three-Phase System Example
 
 ```python
+from ultimate_phasor import PhasorManager
+
 pm = PhasorManager()
 
 # Draw three-phase voltages
@@ -64,6 +66,8 @@ pm.show()
 ### Power Triangle Example
 
 ```python
+from ultimate_phasor import PhasorManager
+
 pm = PhasorManager()
 
 # Draw apparent power
@@ -79,6 +83,8 @@ pm.show()
 ### Mixed Voltage-Current System Example
 
 ```python
+from ultimate_phasor import PhasorManager
+
 pm = PhasorManager()
 
 # Voltage source
