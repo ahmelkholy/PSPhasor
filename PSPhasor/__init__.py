@@ -1,9 +1,7 @@
-"""
-PSPhasor - A Python package for drawing phasor diagrams
-"""
+"""Public package interface for PSPhasor."""
 
-from .phasor_system import PhasorManager, Phasor
+from .phasor_system import Phasor, PhasorManager
 
-__version__ = "0.1.0"
-__author__ = "Your Name"
-__all__ = ["PhasorManager", "Phasor"]
+__version__ = "0.2.0"
+__author__ = "Ahmed M. Elkholy"
+__all__ = ["Phasor", "PhasorManager"]

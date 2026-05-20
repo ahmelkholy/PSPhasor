@@ -1,174 +1,168 @@
 # PSPhasor
 
-A powerful Python package for creating and manipulating phasor diagrams in electrical engineering.
+PSPhasor is a small Python package for drawing phasor diagrams with Matplotlib.
+It supports polar input, Cartesian input, and phasors referenced from previously
+drawn phasors.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![PyPI version](https://img.shields.io/pypi/v/PSPhasor)](https://pypi.org/project/PSPhasor/)
-
-## Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Advanced Usage](#advanced-usage)
-- [API Reference](#api-reference)
-- [Contributing](#contributing)
+![Example phasor diagram](phasor_diagram.png)
 
 ## Features
 
-- Create complex phasor diagrams
-- Support for voltage and current phasors
-- Reference-based phasor positioning
-- Customizable colors and styles
-- Export diagrams as images
+- Draw phasors from magnitude/angle or explicit start/end coordinates.
+- Start a phasor from the start or end of another phasor.
+- Store each phasor as a typed `Phasor` object with magnitude, angle, and
+  component properties.
+- Preserve older dictionary-style reads such as `phasor["magnitude"]`.
+- Fit plots without the excessive blank canvas that can happen with equal
+  aspect Matplotlib axes.
+- Save diagrams directly to image files.
 
 ## Installation
 
-Install the package via pip:
+Install from PyPI:
 
 ```bash
-pip install PSPhasor
+python -m pip install PSPhasor
 ```
 
-````
+For local development:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
 ## Quick Start
 
-Below is an example of how to create a phasor diagram using PSPhasor:
-
 ```python
-from PSPhasor.phasor_system import PhasorManager
+from PSPhasor import PhasorManager
 
-# Create a new phasor diagram
-pm = PhasorManager(figsize=(12, 12))
+manager = PhasorManager(figsize=(9, 5), title="Series phasor diagram")
 
-# Draw source voltage (reference phasor)
-pm.draw_phasor(
+source = manager.draw_phasor(
     "Vs",
     magnitude=10,
     angle=0,
-    start_ref="abs",
-    start_x=0,
-    start_y=0,
-    phasor_type="voltage",
-    label_offset=0.2,
+    label_offset=(0.0, 0.25),
 )
-
-# Draw line voltage drop using end reference
-pm.draw_phasor(
+manager.draw_phasor(
     "Vl",
     magnitude=2,
     angle=150,
     start_ref="Vs",
     ref_point="end",
-    phasor_type="voltage",
-    color="purple",
+    color="tab:purple",
 )
-
-# Draw load voltage using coordinate-based definition
-pm.draw_phasor(
+manager.draw_phasor(
     "Vr",
     start_x=0,
     start_y=0,
-    end_x=8.5,
-    end_y=2.2,
-    phasor_type="voltage",
-    color="green",
+    end_x=8.27,
+    end_y=1.0,
+    color="tab:green",
 )
-
-# Draw current phasors
-pm.draw_phasor(
+manager.draw_phasor(
     "I",
-    magnitude=5,
+    magnitude=4,
     angle=-30,
+    phasor_type="current",
+    label_offset=(0.65, 0.15),
+)
+
+print(f"{source.name}: {source.magnitude:.2f} at {source.angle_deg:.1f} deg")
+manager.save("phasor_diagram.png")
+manager.show()
+```
+
+## API
+
+### `PhasorManager`
+
+```python
+PhasorManager(
+    figsize=(9.0, 5.0),
+    title="Phasor Diagram",
+    xlabel="Real axis",
+    ylabel="Imaginary axis",
+)
+```
+
+Main methods:
+
+- `draw_phasor(...) -> Phasor`: draw and store a phasor.
+- `get_phasor(name) -> Phasor | None`: return a stored phasor.
+- `fit(margin=0.15, equal_aspect=True)`: fit axes around all phasors.
+- `save(filename, dpi=300) -> Path`: save the current diagram.
+- `show()`: display the current diagram.
+- `clear()`: remove all stored phasors and reset the plot.
+
+### `draw_phasor`
+
+```python
+manager.draw_phasor(
+    name,
+    magnitude=None,
+    angle=None,
+    *,
     start_ref="abs",
-    start_x=2,
-    start_y=2,
-    phasor_type="current",
-)
-
-# Draw another current phasor referenced from the end of I
-pm.draw_phasor(
-    "I2",
-    magnitude=3,
-    angle=45,
-    start_ref="I",
+    start_x=0.0,
+    start_y=0.0,
+    end_x=None,
+    end_y=None,
     ref_point="end",
-    phasor_type="current",
-    color="cyan",
+    phasor_type="voltage",
+    color=None,
+    label_offset=0.1,
+    arrow_width=0.005,
+    label=None,
+    metadata=None,
 )
-
-# Get a phasor and print its properties
-vs_phasor = pm.get_phasor("Vs")
-print("\nVs Phasor properties:")
-print(f"Magnitude: {vs_phasor['magnitude']:.2f}")
-print(f"Angle: {vs_phasor['angle']:.2f}°")
-print(f"End point: ({vs_phasor['end_x']:.2f}, {vs_phasor['end_y']:.2f})")
-
-# Save the diagram
-pm.save("phasor_diagram.png")
-
-# Show the complete diagram
-pm.show()
 ```
 
-## Advanced Usage
+Use exactly one geometry mode:
 
-### Three-Phase System Example
+- Polar: provide `magnitude` and `angle`.
+- Cartesian: provide `end_x` and `end_y`.
+
+Set `start_ref` to the name of an existing phasor to start from that phasor.
+Use `ref_point="start"` or `ref_point="end"` to choose the reference point.
+
+### `Phasor`
+
+`draw_phasor` returns a `Phasor` object:
 
 ```python
-from PSPhasor.phasor_system import PhasorManager
+phasor = manager.draw_phasor("Vs", magnitude=10, angle=0)
 
-pm = PhasorManager(figsize=(12, 12))
-
-# Draw three-phase voltages
-pm.draw_phasor("Va", magnitude=10, angle=0)
-pm.draw_phasor("Vb", magnitude=10, angle=-120)
-pm.draw_phasor("Vc", magnitude=10, angle=120)
-
-pm.show()
+phasor.magnitude
+phasor.angle_deg
+phasor.start
+phasor.end
+phasor.dx
+phasor.dy
 ```
 
-### Power Triangle Example
+Dictionary-style access is also supported for compatibility:
 
 ```python
-from PSPhasor.phasor_system import PhasorManager
-
-pm = PhasorManager(figsize=(12, 12))
-
-# Draw apparent power
-pm.draw_phasor("S", magnitude=10, angle=30, color='blue')
-# Draw real power from start of S
-pm.draw_phasor("P", magnitude=8.66, angle=0, start_ref="S", ref_point="start", color='green')
-# Draw reactive power
-pm.draw_phasor("Q", magnitude=5, angle=90, start_ref="S", ref_point="start", color='red')
-
-pm.show()
+phasor["magnitude"]
+phasor["angle_deg"]
+phasor["end_x"]
 ```
 
-## API Reference
+## Development
 
-### PhasorManager Methods
+Run the test suite:
 
-- `draw_phasor(name, magnitude=None, angle=None, start_ref='abs', start_x=0, start_y=0, end_x=None, end_y=None, ref_point='end', phasor_type='voltage', color=None, label_offset=0)`
-- `get_phasor(name)` - Get phasor by name
-- `clear()` - Clear all phasors
-- `show(grid=True, equal_aspect=True)` - Display the diagram
-- `save(filename)` - Save diagram to file
+```bash
+python -m pytest
+```
 
-### Parameters Explained
+Run lint checks:
 
-- **magnitude**: Magnitude (length) for phasors defined with an angle
-- **angle**: Angle (in degrees) for phasors defined with a magnitude
-- **start_x, start_y**: Starting coordinates (used when specifying coordinates)
-- **end_x, end_y**: Ending coordinates (alternative to magnitude/angle)
-- **phasor_type**: 'voltage' or 'current' to adjust style and color
-- **label_offset**: Offset for the phasor label (optional)
-
-## Contributing
-
-Contributions are welcome! Feel free to fork the repository and submit Pull Requests.
+```bash
+ruff check .
+```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-````
+This project is licensed under the MIT License. See `LICENSE` for details.

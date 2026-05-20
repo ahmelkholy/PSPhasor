@@ -19,6 +19,13 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.pytest-tmp/
+pytest_cache/
+pytest_tmp/
+pytest-cache-files-*/
+.ruff_cache/
+tests/test-output/
 
 # IDE
 .idea/
