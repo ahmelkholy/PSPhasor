@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import math
 import csv
+import math
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,6 +25,7 @@ DEFAULT_COLORS: dict[str, str] = {
     "power": "#2ca02c",
 }
 THREE_PHASE_COLORS: tuple[str, str, str] = ("#1f77b4", "#d62728", "#2ca02c")
+PHASE_ROTATION = complex(-0.5, math.sqrt(3.0) / 2.0)
 
 
 @dataclass(frozen=True)
@@ -409,6 +410,8 @@ class PhasorManager:
         color: str | None = None,
         label_offset: LabelOffset = None,
         label: str | None = None,
+        arrow_width: float | None = None,
+        line_width: float | None = None,
         alpha: float = 1.0,
         linestyle: str = "-",
         metadata: Mapping[str, Any] | None = None,
@@ -423,6 +426,8 @@ class PhasorManager:
             color: Matplotlib-compatible color. Defaults by phasor type.
             label_offset: Optional label offset. ``None`` enables auto placement.
             label: Optional display label. Defaults to ``name``.
+            arrow_width: Backward-compatible alias for line width.
+            line_width: Arrow shaft width in points.
             alpha: Arrow and label opacity.
             linestyle: Matplotlib line style for the arrow shaft.
             metadata: Optional user data stored on the returned phasor.
@@ -443,6 +448,8 @@ class PhasorManager:
             color=color,
             label_offset=label_offset,
             label=label,
+            arrow_width=arrow_width,
+            line_width=line_width,
             alpha=alpha,
             linestyle=linestyle,
             metadata={
@@ -461,6 +468,8 @@ class PhasorManager:
         color: str | None = None,
         label_offset: LabelOffset = None,
         label: str | None = None,
+        arrow_width: float | None = None,
+        line_width: float | None = None,
         alpha: float = 1.0,
         linestyle: str = "-",
         metadata: Mapping[str, Any] | None = None,
@@ -481,6 +490,8 @@ class PhasorManager:
             color=color,
             label_offset=label_offset,
             label=label,
+            arrow_width=arrow_width,
+            line_width=line_width,
             alpha=alpha,
             linestyle=linestyle,
             metadata={
@@ -562,6 +573,12 @@ class PhasorManager:
         """Return a phasor by name, or ``None`` if it does not exist."""
 
         return self.phasors.get(name)
+
+    @property
+    def angle_annotations(self) -> tuple[AngleAnnotation, ...]:
+        """Return stored angle annotations."""
+
+        return tuple(self._angle_annotations)
 
     def remove_phasor(self, name: str) -> Phasor:
         """Remove a phasor by name and redraw the diagram.
@@ -951,6 +968,76 @@ def _validate_name(name: str) -> str:
     if not phasor_name:
         raise ValueError("name must be a non-empty string.")
     return phasor_name
+
+
+def polar(magnitude: float, angle: float) -> complex:
+    """Return a complex phasor from magnitude and angle in degrees."""
+
+    magnitude = _coerce_float(magnitude, "magnitude")
+    if magnitude < 0:
+        raise ValueError("magnitude must be greater than or equal to 0.")
+
+    angle_rad = math.radians(_coerce_float(angle, "angle"))
+    return complex(magnitude * math.cos(angle_rad), magnitude * math.sin(angle_rad))
+
+
+def to_polar(value: complex) -> tuple[float, float]:
+    """Return ``(magnitude, angle_deg)`` for a complex phasor."""
+
+    value = _coerce_complex(value, "value")
+    return abs(value), math.degrees(math.atan2(value.imag, value.real))
+
+
+def symmetrical_components(
+    phase_a: complex,
+    phase_b: complex,
+    phase_c: complex,
+) -> tuple[complex, complex, complex]:
+    """Return zero-, positive-, and negative-sequence components.
+
+    Args:
+        phase_a: Phase-a phasor.
+        phase_b: Phase-b phasor.
+        phase_c: Phase-c phasor.
+
+    Returns:
+        ``(zero_sequence, positive_sequence, negative_sequence)``.
+    """
+
+    phase_a = _coerce_complex(phase_a, "phase_a")
+    phase_b = _coerce_complex(phase_b, "phase_b")
+    phase_c = _coerce_complex(phase_c, "phase_c")
+    a = PHASE_ROTATION
+    zero = (phase_a + phase_b + phase_c) / 3.0
+    positive = (phase_a + a * phase_b + a**2 * phase_c) / 3.0
+    negative = (phase_a + a**2 * phase_b + a * phase_c) / 3.0
+    return zero, positive, negative
+
+
+def phase_components(
+    zero_sequence: complex,
+    positive_sequence: complex,
+    negative_sequence: complex,
+) -> tuple[complex, complex, complex]:
+    """Return phase phasors from symmetrical components.
+
+    Args:
+        zero_sequence: Zero-sequence component.
+        positive_sequence: Positive-sequence component.
+        negative_sequence: Negative-sequence component.
+
+    Returns:
+        ``(phase_a, phase_b, phase_c)``.
+    """
+
+    zero_sequence = _coerce_complex(zero_sequence, "zero_sequence")
+    positive_sequence = _coerce_complex(positive_sequence, "positive_sequence")
+    negative_sequence = _coerce_complex(negative_sequence, "negative_sequence")
+    a = PHASE_ROTATION
+    phase_a = zero_sequence + positive_sequence + negative_sequence
+    phase_b = zero_sequence + a**2 * positive_sequence + a * negative_sequence
+    phase_c = zero_sequence + a * positive_sequence + a**2 * negative_sequence
+    return phase_a, phase_b, phase_c
 
 
 def _normalize_phasor_type(phasor_type: str) -> str:

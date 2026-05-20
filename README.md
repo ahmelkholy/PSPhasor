@@ -4,7 +4,7 @@ PSPhasor is a small Python package for drawing phasor diagrams with Matplotlib.
 It supports polar input, Cartesian input, and phasors referenced from previously
 drawn phasors.
 
-![Example phasor diagram](output/01_basic_load.png)
+![Example phasor diagram](01_basic_load.png)
 
 ## Features
 
@@ -15,6 +15,11 @@ drawn phasors.
 - Preserve older dictionary-style reads such as `phasor["magnitude"]`.
 - Draw directly from complex numbers.
 - Generate balanced positive- or negative-sequence three-phase phasor sets.
+- Build line-to-line voltages from phase voltages.
+- Draw vector resultants from existing phasors.
+- Add engineering angle markers, legends, and CSV exports.
+- Convert between polar and complex phasor forms.
+- Compute symmetrical components and reconstruct phase components.
 - Use engineering-style plots with major/minor grids, heavier axes, arrowheads,
   and automatic label placement.
 - Fit plots without the excessive blank canvas that can happen with equal
@@ -100,6 +105,8 @@ The example set includes:
 - `04_feeder_voltage_drop.py`: feeder `IR` and `jIX` voltage-drop components.
 - `05_fault_current_sequence_components.py`: sequence and phase fault currents.
 - `06_power_triangle.py`: real, reactive, and apparent power triangle.
+- `07_line_to_line_voltages.py`: phase-to-phase voltage construction.
+- `08_parallel_load_resultant.py`: branch current summation and angle marker.
 
 ## API
 
@@ -119,6 +126,12 @@ Main methods:
 - `draw_phasor(...) -> Phasor`: draw and store a phasor.
 - `draw_complex(...) -> Phasor`: draw a phasor from a complex value.
 - `draw_three_phase(...) -> list[Phasor]`: draw a balanced three-phase set.
+- `draw_line_to_line(...) -> Phasor`: construct a line voltage such as `Vab`.
+- `draw_resultant(...) -> Phasor`: draw the vector sum of stored phasors.
+- `add_angle_marker(...)`: add a phase-angle marker between two phasors.
+- `add_legend(location="best")`: draw a compact engineering legend.
+- `save_csv(filename) -> Path`: export phasor data for reports.
+- `remove_phasor(name) -> Phasor`: remove a phasor and redraw.
 - `get_phasor(name) -> Phasor | None`: return a stored phasor.
 - `fit(margin=0.15, equal_aspect=True)`: fit axes around all phasors.
 - `save(filename, dpi=300) -> Path`: save the current diagram.
@@ -170,10 +183,37 @@ manager.draw_three_phase(
     sequence="abc",
     labels=(r"$V_a$", r"$V_b$", r"$V_c$"),
 )
+manager.draw_line_to_line("Vab", "Va", "Vb", label=r"$V_{ab}$")
 ```
 
 These helpers are intended for power-system workflows where phasors are already
 represented as complex quantities or balanced phase sets.
+
+### Resultants, Angle Markers, and Export
+
+```python
+manager.draw_resultant(
+    "I_total",
+    ["I_motor", "I_lighting", "I_capacitor"],
+    phasor_type="current",
+    label=r"$I_{total}$",
+)
+manager.add_angle_marker("Vref", "I_total", label=r"$\phi$")
+manager.add_legend("upper right")
+manager.save_csv("examples/output/phasor_data.csv")
+```
+
+### Calculation Helpers
+
+```python
+from PSPhasor import phase_components, polar, symmetrical_components, to_polar
+
+value = polar(10, -30)
+magnitude, angle = to_polar(value)
+
+i0, i1, i2 = symmetrical_components(ia, ib, ic)
+ia, ib, ic = phase_components(i0, i1, i2)
+```
 
 ### `Phasor`
 

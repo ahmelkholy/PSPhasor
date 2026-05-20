@@ -2,9 +2,7 @@
 
 from _common import output_path
 
-from PSPhasor import DiagramStyle, PhasorManager
-
-A = complex(-0.5, 0.8660254037844386)
+from PSPhasor import DiagramStyle, PhasorManager, phase_components
 
 
 def main() -> None:
@@ -22,9 +20,7 @@ def main() -> None:
     i1 = 4.8 - 1.0j
     i2 = 1.6 + 0.8j
 
-    ia = i0 + i1 + i2
-    ib = i0 + A**2 * i1 + A * i2
-    ic = i0 + A * i1 + A**2 * i2
+    ia, ib, ic = phase_components(i0, i1, i2)
 
     manager.draw_complex(
         "I0",
