@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from PSPhasor import PhasorManager
+from PSPhasor import DiagramStyle, PhasorManager
 
 
 def test_draw_polar_phasor_stores_geometry() -> None:
@@ -47,6 +47,37 @@ def test_explicit_cartesian_coordinates() -> None:
     assert phasor.dx == pytest.approx(3)
     assert phasor.dy == pytest.approx(4)
     assert phasor.magnitude == pytest.approx(5)
+    assert phasor.value == pytest.approx(complex(3, 4))
+
+
+def test_draw_complex_uses_real_and_imaginary_components() -> None:
+    manager = PhasorManager()
+
+    phasor = manager.draw_complex("V", 3 + 4j, scale=2)
+
+    assert phasor.start == pytest.approx((0, 0))
+    assert phasor.end == pytest.approx((6, 8))
+    assert phasor.magnitude == pytest.approx(10)
+
+
+def test_draw_three_phase_positive_sequence() -> None:
+    manager = PhasorManager()
+
+    phases = manager.draw_three_phase("V", magnitude=1, angle=0)
+
+    assert [phase.name for phase in phases] == ["Va", "Vb", "Vc"]
+    assert phases[0].angle_deg == pytest.approx(0)
+    assert phases[1].angle_deg == pytest.approx(-120)
+    assert phases[2].angle_deg == pytest.approx(120)
+
+
+def test_custom_diagram_style_controls_label_defaults() -> None:
+    style = DiagramStyle(label_box=False, arrow_line_width=4.0)
+    manager = PhasorManager(style=style)
+
+    phasor = manager.draw_phasor("Vs", magnitude=1, angle=0)
+
+    assert phasor.line_width == pytest.approx(4.0)
 
 
 @pytest.mark.parametrize(
