@@ -4,7 +4,7 @@ PSPhasor is a small Python package for drawing phasor diagrams with Matplotlib.
 It supports polar input, Cartesian input, and phasors referenced from previously
 drawn phasors.
 
-![Example phasor diagram](phasor_diagram.png)
+![Example phasor diagram](examples/output/01_basic_load.png)
 
 ## Features
 
@@ -13,6 +13,10 @@ drawn phasors.
 - Store each phasor as a typed `Phasor` object with magnitude, angle, and
   component properties.
 - Preserve older dictionary-style reads such as `phasor["magnitude"]`.
+- Draw directly from complex numbers.
+- Generate balanced positive- or negative-sequence three-phase phasor sets.
+- Use engineering-style plots with major/minor grids, heavier axes, arrowheads,
+  and automatic label placement.
 - Fit plots without the excessive blank canvas that can happen with equal
   aspect Matplotlib axes.
 - Save diagrams directly to image files.
@@ -34,23 +38,29 @@ python -m pip install -e ".[dev]"
 ## Quick Start
 
 ```python
-from PSPhasor import PhasorManager
+from PSPhasor import DiagramStyle, PhasorManager
 
-manager = PhasorManager(figsize=(9, 5), title="Series phasor diagram")
+manager = PhasorManager(
+    figsize=(9, 5),
+    title="Single-phase load phasor diagram",
+    xlabel="Real component",
+    ylabel="Reactive component",
+    style=DiagramStyle(arrow_line_width=3.0, arrow_head_size=20.0),
+)
 
 source = manager.draw_phasor(
     "Vs",
     magnitude=10,
     angle=0,
-    label_offset=(0.0, 0.25),
+    label=r"$V_s$",
 )
 manager.draw_phasor(
-    "Vl",
+    "Vdrop",
     magnitude=2,
     angle=150,
     start_ref="Vs",
-    ref_point="end",
-    color="tab:purple",
+    color="#9467bd",
+    label=r"$V_{drop}$",
 )
 manager.draw_phasor(
     "Vr",
@@ -58,20 +68,38 @@ manager.draw_phasor(
     start_y=0,
     end_x=8.27,
     end_y=1.0,
-    color="tab:green",
+    color="#2ca02c",
+    label=r"$V_R$",
 )
 manager.draw_phasor(
-    "I",
+    "Iload",
     magnitude=4,
     angle=-30,
     phasor_type="current",
-    label_offset=(0.65, 0.15),
+    label=r"$I_L$",
 )
 
 print(f"{source.name}: {source.magnitude:.2f} at {source.angle_deg:.1f} deg")
-manager.save("phasor_diagram.png")
-manager.show()
+manager.save("examples/output/01_basic_load.png")
 ```
+
+## Examples
+
+All examples live under `examples/`.
+
+```bash
+python examples/run_all.py
+```
+
+The example set includes:
+
+- `00_minimal.py`: minimal voltage/current diagram.
+- `01_basic_load.py`: source voltage, line drop, receiving voltage, and current.
+- `02_balanced_three_phase.py`: balanced voltage and current phasors.
+- `03_unbalanced_three_phase_load.py`: unbalanced currents and neutral current.
+- `04_feeder_voltage_drop.py`: feeder `IR` and `jIX` voltage-drop components.
+- `05_fault_current_sequence_components.py`: sequence and phase fault currents.
+- `06_power_triangle.py`: real, reactive, and apparent power triangle.
 
 ## API
 
@@ -89,6 +117,8 @@ PhasorManager(
 Main methods:
 
 - `draw_phasor(...) -> Phasor`: draw and store a phasor.
+- `draw_complex(...) -> Phasor`: draw a phasor from a complex value.
+- `draw_three_phase(...) -> list[Phasor]`: draw a balanced three-phase set.
 - `get_phasor(name) -> Phasor | None`: return a stored phasor.
 - `fit(margin=0.15, equal_aspect=True)`: fit axes around all phasors.
 - `save(filename, dpi=300) -> Path`: save the current diagram.
@@ -111,9 +141,12 @@ manager.draw_phasor(
     ref_point="end",
     phasor_type="voltage",
     color=None,
-    label_offset=0.1,
-    arrow_width=0.005,
+    label_offset=None,
+    arrow_width=None,
+    line_width=None,
     label=None,
+    alpha=1.0,
+    linestyle="-",
     metadata=None,
 )
 ```
@@ -125,6 +158,22 @@ Use exactly one geometry mode:
 
 Set `start_ref` to the name of an existing phasor to start from that phasor.
 Use `ref_point="start"` or `ref_point="end"` to choose the reference point.
+
+### Complex and Three-Phase Helpers
+
+```python
+manager.draw_complex("V", 3 + 4j, label=r"$V$")
+manager.draw_three_phase(
+    "V",
+    magnitude=1.0,
+    angle=0.0,
+    sequence="abc",
+    labels=(r"$V_a$", r"$V_b$", r"$V_c$"),
+)
+```
+
+These helpers are intended for power-system workflows where phasors are already
+represented as complex quantities or balanced phase sets.
 
 ### `Phasor`
 

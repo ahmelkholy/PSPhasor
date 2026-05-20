@@ -19,6 +19,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Tool caches and generated test/example output
 .pytest_cache/
 .pytest-tmp/
 pytest_cache/
@@ -26,6 +28,7 @@ pytest_tmp/
 pytest-cache-files-*/
 .ruff_cache/
 tests/test-output/
+examples/output/
 
 # IDE
 .idea/

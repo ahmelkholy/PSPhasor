@@ -330,6 +330,10 @@ class PhasorManager:
         color: str | None = None,
         label_offset: LabelOffset = None,
         label: str | None = None,
+        arrow_width: float | None = None,
+        line_width: float | None = None,
+        alpha: float = 1.0,
+        linestyle: str = "-",
         metadata: Mapping[str, Any] | None = None,
     ) -> Phasor:
         """Draw a phasor from a complex value.
@@ -347,6 +351,10 @@ class PhasorManager:
             color: Matplotlib-compatible color. Defaults by phasor type.
             label_offset: Optional label offset. ``None`` enables auto placement.
             label: Optional display label. Defaults to ``name``.
+            arrow_width: Backward-compatible alias for line width.
+            line_width: Arrow shaft width in points.
+            alpha: Arrow and label opacity.
+            linestyle: Matplotlib line style for the arrow shaft.
             metadata: Optional user data stored on the returned phasor.
 
         Returns:
@@ -366,6 +374,10 @@ class PhasorManager:
             color=color,
             label_offset=label_offset,
             label=label,
+            arrow_width=arrow_width,
+            line_width=line_width,
+            alpha=alpha,
+            linestyle=linestyle,
             metadata=metadata,
         )
 
