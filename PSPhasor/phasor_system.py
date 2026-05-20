@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import csv
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,6 +12,8 @@ from typing import Any, Literal
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.patches import Arc
 
 ReferencePoint = Literal["start", "end"]
 SequenceType = Literal["abc", "acb", "positive", "negative"]
@@ -147,6 +150,19 @@ class Phasor(Mapping[str, Any]):
         return len(self.as_dict())
 
 
+@dataclass(frozen=True)
+class AngleAnnotation:
+    """Angle marker between two stored phasors."""
+
+    from_phasor: str
+    to_phasor: str
+    label: str | None = None
+    radius: float | None = None
+    color: str = "#333333"
+    line_width: float = 1.2
+    alpha: float = 0.9
+
+
 class PhasorManager:
     """Create, store, and render phasor diagrams with Matplotlib.
 
@@ -177,6 +193,8 @@ class PhasorManager:
         self.ax: Axes
         self.fig, self.ax = plt.subplots(figsize=figsize, constrained_layout=True)
         self.phasors: dict[str, Phasor] = {}
+        self._angle_annotations: list[AngleAnnotation] = []
+        self._legend_location: str | None = None
         self.title = title
         self.xlabel = xlabel
         self.ylabel = ylabel
@@ -381,6 +399,97 @@ class PhasorManager:
             metadata=metadata,
         )
 
+    def draw_resultant(
+        self,
+        name: str,
+        components: Sequence[str],
+        *,
+        scale: float = 1.0,
+        phasor_type: str = "voltage",
+        color: str | None = None,
+        label_offset: LabelOffset = None,
+        label: str | None = None,
+        alpha: float = 1.0,
+        linestyle: str = "-",
+        metadata: Mapping[str, Any] | None = None,
+    ) -> Phasor:
+        """Draw the vector sum of existing phasors.
+
+        Args:
+            name: Unique phasor identifier for the resultant.
+            components: Names of phasors to sum.
+            scale: Multiplier applied to the summed value.
+            phasor_type: Type label used for default color selection.
+            color: Matplotlib-compatible color. Defaults by phasor type.
+            label_offset: Optional label offset. ``None`` enables auto placement.
+            label: Optional display label. Defaults to ``name``.
+            alpha: Arrow and label opacity.
+            linestyle: Matplotlib line style for the arrow shaft.
+            metadata: Optional user data stored on the returned phasor.
+
+        Returns:
+            The stored resultant :class:`Phasor`.
+        """
+
+        if not components:
+            raise ValueError("components must contain at least one phasor name.")
+
+        value = sum(self._require_phasor(name).value for name in components)
+        return self.draw_complex(
+            name,
+            value,
+            scale=scale,
+            phasor_type=phasor_type,
+            color=color,
+            label_offset=label_offset,
+            label=label,
+            alpha=alpha,
+            linestyle=linestyle,
+            metadata={
+                "components": list(components),
+                **dict(metadata or {}),
+            },
+        )
+
+    def draw_line_to_line(
+        self,
+        name: str,
+        positive_phase: str,
+        negative_phase: str,
+        *,
+        scale: float = 1.0,
+        color: str | None = None,
+        label_offset: LabelOffset = None,
+        label: str | None = None,
+        alpha: float = 1.0,
+        linestyle: str = "-",
+        metadata: Mapping[str, Any] | None = None,
+    ) -> Phasor:
+        """Draw a line-to-line voltage from two phase-voltage phasors.
+
+        The resulting value is ``positive_phase - negative_phase`` and is drawn
+        from the origin.
+        """
+
+        positive = self._require_phasor(positive_phase)
+        negative = self._require_phasor(negative_phase)
+        return self.draw_complex(
+            name,
+            positive.value - negative.value,
+            scale=scale,
+            phasor_type="voltage",
+            color=color,
+            label_offset=label_offset,
+            label=label,
+            alpha=alpha,
+            linestyle=linestyle,
+            metadata={
+                "positive_phase": positive_phase,
+                "negative_phase": negative_phase,
+                **dict(metadata or {}),
+            },
+        )
+
     def draw_three_phase(
         self,
         prefix: str,
@@ -454,10 +563,141 @@ class PhasorManager:
 
         return self.phasors.get(name)
 
+    def remove_phasor(self, name: str) -> Phasor:
+        """Remove a phasor by name and redraw the diagram.
+
+        Args:
+            name: Stored phasor name.
+
+        Returns:
+            The removed phasor.
+
+        Raises:
+            ValueError: If no phasor with ``name`` exists.
+        """
+
+        phasor = self._require_phasor(name)
+        del self.phasors[name]
+        self._angle_annotations = [
+            annotation
+            for annotation in self._angle_annotations
+            if name not in {annotation.from_phasor, annotation.to_phasor}
+        ]
+        self.render()
+        return phasor
+
+    def add_angle_marker(
+        self,
+        from_phasor: str,
+        to_phasor: str,
+        *,
+        label: str | None = None,
+        radius: float | None = None,
+        color: str = "#333333",
+        line_width: float = 1.2,
+        alpha: float = 0.9,
+    ) -> AngleAnnotation:
+        """Add an angle marker between two phasors.
+
+        Args:
+            from_phasor: First phasor name.
+            to_phasor: Second phasor name.
+            label: Optional marker label. Defaults to the smaller angle.
+            radius: Optional marker radius in data units.
+            color: Marker color.
+            line_width: Arc line width.
+            alpha: Arc and label opacity.
+
+        Returns:
+            The stored angle annotation.
+        """
+
+        self._require_phasor(from_phasor)
+        self._require_phasor(to_phasor)
+        annotation = AngleAnnotation(
+            from_phasor=from_phasor,
+            to_phasor=to_phasor,
+            label=label,
+            radius=radius,
+            color=color,
+            line_width=_coerce_float(line_width, "line_width"),
+            alpha=_coerce_unit_interval(alpha, "alpha"),
+        )
+        self._angle_annotations.append(annotation)
+        self.render()
+        return annotation
+
+    def clear_annotations(self) -> None:
+        """Remove angle markers and redraw the diagram."""
+
+        self._angle_annotations.clear()
+        self.render()
+
+    def add_legend(self, location: str = "best") -> None:
+        """Enable a compact legend using current phasor colors and labels."""
+
+        self._legend_location = location
+        self.render()
+
+    def hide_legend(self) -> None:
+        """Disable the legend and redraw the diagram."""
+
+        self._legend_location = None
+        self.render()
+
+    def to_records(self) -> list[dict[str, float | str]]:
+        """Return tabular phasor data suitable for export."""
+
+        records: list[dict[str, float | str]] = []
+        for phasor in self.phasors.values():
+            records.append(
+                {
+                    "name": phasor.name,
+                    "type": phasor.phasor_type,
+                    "start_x": phasor.start_x,
+                    "start_y": phasor.start_y,
+                    "end_x": phasor.end_x,
+                    "end_y": phasor.end_y,
+                    "real": phasor.dx,
+                    "imag": phasor.dy,
+                    "magnitude": phasor.magnitude,
+                    "angle_deg": phasor.angle_deg,
+                    "label": phasor.label or phasor.name,
+                }
+            )
+        return records
+
+    def save_csv(self, filename: str | Path) -> Path:
+        """Export stored phasor data to a CSV file."""
+
+        output_path = Path(filename)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        records = self.to_records()
+        fieldnames = [
+            "name",
+            "type",
+            "start_x",
+            "start_y",
+            "end_x",
+            "end_y",
+            "real",
+            "imag",
+            "magnitude",
+            "angle_deg",
+            "label",
+        ]
+        with output_path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(records)
+        return output_path
+
     def clear(self) -> None:
         """Clear all phasors and reset the plot."""
 
         self.phasors.clear()
+        self._angle_annotations.clear()
+        self._legend_location = None
         self.render()
 
     def render(self) -> None:
@@ -468,7 +708,11 @@ class PhasorManager:
         self.fit()
         for phasor in self.phasors.values():
             self._draw_arrow(phasor)
+        for annotation in self._angle_annotations:
+            self._draw_angle_marker(annotation)
+        for phasor in self.phasors.values():
             self._draw_label(phasor)
+        self._draw_legend()
 
     def fit(self, margin: float = 0.15, equal_aspect: bool = True) -> None:
         """Fit the axes to all phasors without shrinking the plot area.
@@ -551,6 +795,12 @@ class PhasorManager:
 
         return ref_phasor.start if ref_point == "start" else ref_phasor.end
 
+    def _require_phasor(self, name: str) -> Phasor:
+        try:
+            return self.phasors[name]
+        except KeyError as exc:
+            raise ValueError(f"Phasor '{name}' does not exist.") from exc
+
     def _data_limits(self, margin: float = 0.15) -> tuple[float, float, float, float]:
         points = [(0.0, 0.0)]
         for phasor in self.phasors.values():
@@ -611,6 +861,68 @@ class PhasorManager:
             bbox=label_box,
             zorder=4,
         )
+
+    def _draw_angle_marker(self, annotation: AngleAnnotation) -> None:
+        from_phasor = self._require_phasor(annotation.from_phasor)
+        to_phasor = self._require_phasor(annotation.to_phasor)
+        angle_from = from_phasor.angle_deg
+        delta = _smallest_angle_delta(angle_from, to_phasor.angle_deg)
+        theta1 = angle_from if delta >= 0 else angle_from + delta
+        theta2 = angle_from + delta if delta >= 0 else angle_from
+        radius = annotation.radius or self._data_span() * 0.16
+
+        self.ax.add_patch(
+            Arc(
+                (0.0, 0.0),
+                width=2.0 * radius,
+                height=2.0 * radius,
+                theta1=theta1,
+                theta2=theta2,
+                color=annotation.color,
+                linewidth=annotation.line_width,
+                alpha=annotation.alpha,
+                zorder=2,
+            )
+        )
+
+        label_angle = math.radians(angle_from + delta / 2.0)
+        label_radius = radius * 1.18
+        label = annotation.label or rf"${abs(delta):.1f}^\circ$"
+        self.ax.text(
+            label_radius * math.cos(label_angle),
+            label_radius * math.sin(label_angle),
+            label,
+            color=annotation.color,
+            fontsize=self.style.label_font_size,
+            fontweight=self.style.label_font_weight,
+            ha="center",
+            va="center",
+            alpha=annotation.alpha,
+            bbox={
+                "boxstyle": "round,pad=0.12",
+                "facecolor": self.style.background_color,
+                "edgecolor": "none",
+                "alpha": self.style.label_box_alpha,
+            },
+            zorder=4,
+        )
+
+    def _draw_legend(self) -> None:
+        if not self._legend_location or not self.phasors:
+            return
+
+        handles = [
+            Line2D(
+                [0],
+                [0],
+                color=phasor.color,
+                linewidth=phasor.line_width or self.style.arrow_line_width,
+                label=phasor.label or phasor.name,
+                alpha=phasor.alpha,
+            )
+            for phasor in self.phasors.values()
+        ]
+        self.ax.legend(handles=handles, loc=self._legend_location, framealpha=0.92)
 
     def _label_position(self, phasor: Phasor) -> tuple[float, float]:
         mid_x = phasor.start_x + phasor.dx / 2.0
@@ -690,6 +1002,12 @@ def _phase_angles(
     if normalized in {"acb", "negative"}:
         return base_angle, base_angle + 120.0, base_angle - 120.0
     raise ValueError("sequence must be 'abc', 'acb', 'positive', or 'negative'.")
+
+
+def _smallest_angle_delta(from_angle: float, to_angle: float) -> float:
+    """Return the signed smallest angular delta in degrees."""
+
+    return (to_angle - from_angle + 180.0) % 360.0 - 180.0
 
 
 def _default_phase_labels(prefix: str) -> tuple[str, str, str]:

@@ -4,7 +4,7 @@ PSPhasor is a small Python package for drawing phasor diagrams with Matplotlib.
 It supports polar input, Cartesian input, and phasors referenced from previously
 drawn phasors.
 
-![Example phasor diagram](examples/output/01_basic_load.png)
+![Example phasor diagram](output/01_basic_load.png)
 
 ## Features
 
